@@ -59,7 +59,6 @@ function send_post_event($post_ID, $post, $update)
     );
     // Execute cURL session and get response
     $response = curl_exec($ch);
-
     // Check for cURL errors
     if (curl_errno($ch)) {
         error_log('cURL error: ' . curl_error($ch));
