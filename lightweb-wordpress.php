@@ -36,7 +36,6 @@ function send_post_event($post_ID, $post, $update)
         'post_date' => $post->post_date,
         'post_modified' => $post->post_modified,
         'post_uri' => $post->post_uri,
-        'post_uri' => $post->post_uri,
         'post_type' => $post->post_type,
         'post_parent' => $post->post_parent,
         'secret' => AUTH_KEY,
