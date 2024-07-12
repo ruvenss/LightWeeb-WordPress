@@ -3,7 +3,7 @@
 /*
 Plugin Name: LightWeb WordPress
 Description: Sends an event to your LightWeb server when a post is created or updated.
-Version: 1.0.0
+Version: 1.0.1
 Author: NIZU <marvin.ai@nizu.io>
 Author URI: https://nizu.io/en/
 Text Domain: NIZU
@@ -24,12 +24,14 @@ function send_post_event($post_ID, $post, $update)
         return;
     }
     // Define the URL of the remote server
-    $remote_url = 'https://your-server-url.com/api/v1/';
+    $remote_url = 'https://stage.energieplus-lesite.be/api/v1/?a=wp_article_update';
     // Prepare data to send
+    $permalink = get_permalink($post->ID);
     $data = array(
         'a' => 'wp_article_update',
         'post_id' => $post_ID,
         'post_title' => json_encode($post->post_title),
+        'post_description' => get_post_meta($post_ID, "description", true),
         'post_content' => json_encode($post->post_content),
         'post_status' => $post->post_status,
         'post_author' => $post->post_author,
@@ -38,7 +40,10 @@ function send_post_event($post_ID, $post, $update)
         'post_uri' => $post->post_uri,
         'post_type' => $post->post_type,
         'post_parent' => $post->post_parent,
+        'post_permalink' => $permalink,
+        'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($post_ID)),
         'secret' => AUTH_KEY,
+        'site_url' => site_url(),
         'update' => $update
     );
     // Convert data to JSON format
