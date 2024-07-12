@@ -3,7 +3,7 @@
 /*
 Plugin Name: LightWeb WordPress
 Description: Sends an event to your LightWeb server when a post is created or updated.
-Version: 1.0.1
+Version: 1.0.0
 Author: NIZU <marvin.ai@nizu.io>
 Author URI: https://nizu.io/en/
 Text Domain: NIZU
@@ -15,9 +15,9 @@ License URI: https://raw.githubusercontent.com/ruvenss/LightWeb-WordPress/main/L
 */
 
 // Hook into post creation and update
-add_action('save_post', 'send_post_event', 10, 3);
+add_action('save_post', 'lightweb_send_post_event', 10, 3);
 
-function send_post_event($post_ID, $post, $update)
+function lightweb_send_post_event($post_ID, $post, $update)
 {
     // Ensure the function runs only once per post creation or update
     if (wp_is_post_revision($post_ID) || wp_is_post_autosave($post_ID)) {
@@ -25,6 +25,19 @@ function send_post_event($post_ID, $post, $update)
     }
     // Define the URL of the remote server
     $remote_url = 'https://stage.energieplus-lesite.be/api/v1/?a=wp_article_update';
+    switch ($post->post_type) {
+        case 'post':
+            $header = 'header.html';
+            $footer = 'footer.html';
+            break;
+        case 'page':
+            $header = 'header.html';
+            $footer = 'footer.html';
+            break;
+        default:
+            # code...
+            break;
+    }
     // Prepare data to send
     $permalink = get_permalink($post->ID);
     $data = array(
@@ -32,7 +45,7 @@ function send_post_event($post_ID, $post, $update)
         'post_id' => $post_ID,
         'post_title' => json_encode($post->post_title),
         'post_description' => get_post_meta($post_ID, "description", true),
-        'post_content' => json_encode($post->post_content),
+        'post_content' => base64_encode($post->post_content),
         'post_status' => $post->post_status,
         'post_author' => $post->post_author,
         'post_date' => $post->post_date,
@@ -42,6 +55,8 @@ function send_post_event($post_ID, $post, $update)
         'post_parent' => $post->post_parent,
         'post_permalink' => $permalink,
         'featured_image' => wp_get_attachment_url(get_post_thumbnail_id($post_ID)),
+        'header' => $header,
+        'footer' => $footer,
         'secret' => AUTH_KEY,
         'site_url' => site_url(),
         'update' => $update
