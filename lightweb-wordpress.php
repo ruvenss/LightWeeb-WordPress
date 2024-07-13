@@ -23,17 +23,20 @@ function lightweb_send_post_event($post_ID, $post, $update)
     if (wp_is_post_revision($post_ID) || wp_is_post_autosave($post_ID)) {
         return;
     }
+    $lightweb_options = get_option('lightweb_option_name'); // Array of All Options
     // Define the URL of the remote server
-    $remote_url = 'https://stage.energieplus-lesite.be/api/';
-    $auto_publish = true;
+    $remote_url = 'https://' . $lightweb_options['lightweb_stage_server_0'] . '/api/';
+    if ($lightweb_options['auto_publish_when_a_post_is_created_or_updated_1'] == "true") {
+        $auto_publish = true;
+    }
     switch ($post->post_type) {
         case 'post':
-            $header = 'header_post.html';
-            $footer = 'footer_post.html';
+            $header = $lightweb_options['post_header_2'];
+            $footer = $lightweb_options['post_footer_3'];
             break;
         case 'page':
-            $header = 'header.html';
-            $footer = 'footer.html';
+            $header = $lightweb_options['page_header_4'];
+            $footer = $lightweb_options['page_footer_5'];
             break;
         default:
             # code...
@@ -185,7 +188,7 @@ class LightWeb
 
         add_settings_field(
             'lightweb_stage_server_0', // id
-            'LightWeb Stage Server', // title
+            'LightWeb Stage Host', // title
             array($this, 'lightweb_stage_server_0_callback'), // callback
             'lightweb-admin', // page
             'lightweb_setting_section' // section
@@ -195,6 +198,38 @@ class LightWeb
             'auto_publish_when_a_post_is_created_or_updated_1', // id
             'Auto Publish when a post is created or updated', // title
             array($this, 'auto_publish_when_a_post_is_created_or_updated_1_callback'), // callback
+            'lightweb-admin', // page
+            'lightweb_setting_section' // section
+        );
+
+        add_settings_field(
+            'post_header_2', // id
+            'Post header', // title
+            array($this, 'post_header_2_callback'), // callback
+            'lightweb-admin', // page
+            'lightweb_setting_section' // section
+        );
+
+        add_settings_field(
+            'post_footer_3', // id
+            'Post footer', // title
+            array($this, 'post_footer_3_callback'), // callback
+            'lightweb-admin', // page
+            'lightweb_setting_section' // section
+        );
+
+        add_settings_field(
+            'page_header_4', // id
+            'Page Header', // title
+            array($this, 'page_header_4_callback'), // callback
+            'lightweb-admin', // page
+            'lightweb_setting_section' // section
+        );
+
+        add_settings_field(
+            'page_footer_5', // id
+            'Page footer', // title
+            array($this, 'page_footer_5_callback'), // callback
             'lightweb-admin', // page
             'lightweb_setting_section' // section
         );
@@ -209,6 +244,22 @@ class LightWeb
 
         if (isset($input['auto_publish_when_a_post_is_created_or_updated_1'])) {
             $sanitary_values['auto_publish_when_a_post_is_created_or_updated_1'] = $input['auto_publish_when_a_post_is_created_or_updated_1'];
+        }
+
+        if (isset($input['post_header_2'])) {
+            $sanitary_values['post_header_2'] = sanitize_text_field($input['post_header_2']);
+        }
+
+        if (isset($input['post_footer_3'])) {
+            $sanitary_values['post_footer_3'] = sanitize_text_field($input['post_footer_3']);
+        }
+
+        if (isset($input['page_header_4'])) {
+            $sanitary_values['page_header_4'] = sanitize_text_field($input['page_header_4']);
+        }
+
+        if (isset($input['page_footer_5'])) {
+            $sanitary_values['page_footer_5'] = sanitize_text_field($input['page_footer_5']);
         }
 
         return $sanitary_values;
@@ -226,6 +277,7 @@ class LightWeb
             isset($this->lightweb_options['lightweb_stage_server_0']) ? esc_attr($this->lightweb_options['lightweb_stage_server_0']) : ''
         );
     }
+
     public function auto_publish_when_a_post_is_created_or_updated_1_callback()
     {
         ?> <select name="lightweb_option_name[auto_publish_when_a_post_is_created_or_updated_1]"
@@ -238,13 +290,38 @@ class LightWeb
         <?php
     }
 
+    public function post_header_2_callback()
+    {
+        printf(
+            '<input class="regular-text" type="text" name="lightweb_option_name[post_header_2]" id="post_header_2" value="%s">',
+            isset($this->lightweb_options['post_header_2']) ? esc_attr($this->lightweb_options['post_header_2']) : ''
+        );
+    }
+
+    public function post_footer_3_callback()
+    {
+        printf(
+            '<input class="regular-text" type="text" name="lightweb_option_name[post_footer_3]" id="post_footer_3" value="%s">',
+            isset($this->lightweb_options['post_footer_3']) ? esc_attr($this->lightweb_options['post_footer_3']) : ''
+        );
+    }
+
+    public function page_header_4_callback()
+    {
+        printf(
+            '<input class="regular-text" type="text" name="lightweb_option_name[page_header_4]" id="page_header_4" value="%s">',
+            isset($this->lightweb_options['page_header_4']) ? esc_attr($this->lightweb_options['page_header_4']) : ''
+        );
+    }
+
+    public function page_footer_5_callback()
+    {
+        printf(
+            '<input class="regular-text" type="text" name="lightweb_option_name[page_footer_5]" id="page_footer_5" value="%s">',
+            isset($this->lightweb_options['page_footer_5']) ? esc_attr($this->lightweb_options['page_footer_5']) : ''
+        );
+    }
+
 }
 if (is_admin())
     $lightweb = new LightWeb();
-
-/* 
- * Retrieve this value with:
- * $lightweb_options = get_option( 'lightweb_option_name' ); // Array of All Options
- * $lightweb_stage_server_0 = $lightweb_options['lightweb_stage_server_0']; // LightWeb Stage Server
- * $auto_publish_when_a_post_is_created_or_updated_1 = $lightweb_options['auto_publish_when_a_post_is_created_or_updated_1']; // Auto Publish when a post is created or updated
- */
