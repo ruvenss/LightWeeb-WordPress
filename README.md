@@ -9,3 +9,35 @@ But Why? ... you may ask
 
 - WordPress Attacks are becoming more and more often, the plugins less and less sustainables, and more and more insecure. making WordPress a nightmare after 3 months of being installed.
 - With LightWeb and WordPress you keep the best of both worlds, in one side the easynest of editing, and updating articles and pages with non tech people and on the other hand a pure html,css, and JS website without CMS platform.
+
+# Installation
+
+- Download the source from GitHub in *zip*
+- Upload the same zip as a new plugin to your WordPress edit website.
+  - Recommendation: use a domain such as edit.yourwebsite.com for wordpress, and VPN and firewall the hell out of it
+  - Recommendation: use another container/instance/server for your stage.yourwebsite.com, and yourwebsite.com with the LightWeb framework
+- Generate a user app token or password and set it in the LightWeb Stage Server in the file `api/v1/my_config.php`
+- Copy and paste the WordPress secret token to the same file
+
+Your my_config file should look like this:
+
+```php
+<?php
+/**
+ * Here you will define your own global variables
+ * Remember LIGHTWEB Globals starts by LIGHTWEB_ 
+ * you can allways use your own definitions
+ */
+define("LIGHTWEB_SENDGRID", false);
+define("LIGHTWEB_SENDGRID_API_KEY", null);
+define("LIGHTWEB_ONESIGNAL_ID", null);
+define("LIGHTWEB_ONESIGNAL_API_KEY", null);
+define("LIGHTWEB_NIZUTOKEN", null);
+define("LIGHTWEB_NIZUCLOUDAPI", null);
+define("LIGHTWEB_STRIPE_SECRET", null);
+define("WP_IDX", "wp_");
+define("wp_secret", "KCojdZ<vWna16RZm:`k )eH,l,%g2d&d%Vb;lg8ZOytzl+Q)O]MwXi9PHgl;d,OD");
+define("wp_token", "LjTb y7J2 mqEd s3km wN1m Ygj7");
+```
+
+After that Go to your WordPress Tools->LightWeb and indicate your stage server settings, then click save and thats it.
