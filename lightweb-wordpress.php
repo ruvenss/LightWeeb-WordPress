@@ -16,7 +16,65 @@ License URI: https://raw.githubusercontent.com/ruvenss/LightWeb-WordPress/main/L
 
 // Hook into post creation and update
 add_action('save_post', 'lightweb_send_post_event', 10, 3);
+// Hook into category creation and update
+add_action('created_category', 'lightweb_send_category_event', 10, 2);
+add_action('edited_category', 'lightweb_send_category_event', 10, 2);
+function lightweb_send_category_event($term_id, $tt_id)
+{
+    // Get the category object
+    $category = get_term($term_id);
+    $lightweb_options = get_option('lightweb_option_name'); // Array of All Options
+    // Define the URL of the remote server
+    $remote_url = 'https://' . $lightweb_options['lightweb_stage_server_0'] . '/api/';
 
+    // Prepare data to send
+    $permalink = get_category_link($term_id);
+    $data = array(
+        'term_id' => $term_id,
+        'name' => $category->name,
+        'slug' => $category->slug,
+        'description' => $category->description,
+        'taxonomy' => $category->taxonomy,
+        'parent' => $category->parent,
+        'count' => $category->count,
+        'secret' => AUTH_KEY,
+        'site_url' => site_url(),
+        'post_permalink' => base64_encode($permalink),
+    );
+
+    // Convert data to JSON format
+    $data_json = json_encode($data);
+
+    // Initialize cURL session
+    $ch = curl_init($remote_url . "v1/?a=wp_category_update");
+
+    // Set cURL options
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt(
+        $ch,
+        CURLOPT_HTTPHEADER,
+        array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($data_json)
+        )
+    );
+
+    // Execute cURL session and get response
+    $response = curl_exec($ch);
+
+    // Check for cURL errors
+    if (curl_errno($ch)) {
+        error_log('cURL error: ' . curl_error($ch));
+    } else {
+        // Log the response from the remote server
+        error_log('Response from remote server: ' . $response);
+    }
+
+    // Close cURL session
+    curl_close($ch);
+}
 function lightweb_send_post_event($post_ID, $post, $update)
 {
     // Ensure the function runs only once per post creation or update
@@ -31,6 +89,7 @@ function lightweb_send_post_event($post_ID, $post, $update)
     }
     switch ($post->post_type) {
         case 'post':
+        case 'category':
             $header = $lightweb_options['post_header_2'];
             $footer = $lightweb_options['post_footer_3'];
             break;
@@ -44,6 +103,7 @@ function lightweb_send_post_event($post_ID, $post, $update)
     }
     // Prepare data to send
     $permalink = get_permalink($post->ID);
+    $categories = get_the_category($post->ID);
     $data = array(
         'a' => 'wp_article_update',
         'post_id' => $post_ID,
@@ -63,7 +123,8 @@ function lightweb_send_post_event($post_ID, $post, $update)
         'footer' => $footer,
         'secret' => AUTH_KEY,
         'site_url' => site_url(),
-        'update' => $update
+        'update' => $update,
+        'categories' => $categories
     );
     // Convert data to JSON format
     $data_json = json_encode($data);
@@ -86,6 +147,7 @@ function lightweb_send_post_event($post_ID, $post, $update)
     curl_close($ch);
     // Check for cURL errors
     // Log the response from the remote server
+    error_log($response);
     if (curl_errno($ch)) {
         error_log('cURL error: ' . curl_error($ch));
     } else {
