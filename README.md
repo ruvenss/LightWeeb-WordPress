@@ -38,6 +38,7 @@ define("LIGHTWEB_STRIPE_SECRET", null);
 define("WP_IDX", "wp_");
 define("wp_secret", "KCojdZ<vWna16RZm:`k )eH,l,%g2d&d%Vb;lg8ZOytzl+Q)O]MwXi9PHgl;d,OD");
 define("wp_token", "LjTb y7J2 mqEd s3km wN1m Ygj7");
+define("wp_taxonomy", true);
 ```
 
 After that Go to your WordPress Tools->LightWeb and indicate your stage server settings, then click save and thats it.
