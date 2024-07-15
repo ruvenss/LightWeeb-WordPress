@@ -18,13 +18,25 @@ if (LW_LOCAL['version'] === LW_RELEASE['version']) {
     echo "\nNew release detected.\nCurrent version: " . LW_LOCAL['version'] . "\nLast Version: " . LW_RELEASE['version'] . "\n";
     define("LW_UPDATABLE_FILES", LW_RELEASE['updatable_files']);
     file_put_contents("lightweb-wordpress.json", json_encode(LW_RELEASE, JSON_PRETTY_PRINT));
-    foreach (LW_UPDATABLE_FILES as $file2update) {
-        $local_dest = $file2update;
-        verify_path($file2update);
-        echo "📁 " . $file2update;
-        $file_content = file_get_contents(GITURL . $file2update);
-        unlink($local_dest);
-        file_put_contents($local_dest, $file_content, LOCK_EX);
+    // Update files
+    foreach (LW_UPDATABLE_FILES as $fileToUpdate) {
+        $localDest = $fileToUpdate;
+        verify_path($fileToUpdate);
+        echo "📁 " . $fileToUpdate;
+        $fileContent = file_get_contents(GITURL . $fileToUpdate);
+        if ($fileContent === false) {
+            echo " ❌ Failed to fetch file content\n";
+            continue;
+        }
+        if (file_exists($localDest) && !unlink($localDest)) {
+            echo " ❌ Failed to delete old file\n";
+            continue;
+        }
+        $updateFile = file_put_contents($localDest, $fileContent, LOCK_EX);
+        if ($updateFile === false) {
+            echo " ❌ Failed to write new file\n";
+            continue;
+        }
         echo " ✅\n";
     }
 }
