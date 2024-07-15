@@ -1,0 +1,18 @@
+{
+    "version": "1.0.1",
+    "last_update": "2024-07-30 22:40:20",
+    "release_title": "LightWeb WordPress OSC",
+    "release_notes": "New Settings panel",
+    "change_log_patches": "",
+    "change_log_bugs": "",
+    "change_log_updates": "",
+    "change_log_new": "",
+    "change_log_security": "",
+    "updatable_files": [
+        "\/lightweb-wordpress.php",
+        "\/README.md",
+        "\/index.php",
+        "\/uninstall.php",
+        "\/lightweb-wordpress.json"
+    ]
+}
