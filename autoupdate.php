@@ -1,11 +1,15 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 define("webapp_path", dirname(dirname(__FILE__)));
 define("GITURL", "https://raw.githubusercontent.com/ruvenss/LightWeb-WordPress/main/");
 if (!file_exists("lightweb-wordpress.json")) {
     $LW_LOCAL = array("version" => 0);
 } else {
-    $LW_LOCAL = json_decode(file_get_contents(GITURL . "lightweb-wordpress.json"), true);
+    $LW_LOCAL = json_decode(file_get_contents("lightweb-wordpress.json"), true);
 }
+
 define("LW_LOCAL", $LW_LOCAL);
 define("LW_RELEASE", json_decode(file_get_contents(GITURL . "lightweb-wordpress.json"), true));
 if (LW_LOCAL['version'] === LW_RELEASE['version']) {
@@ -19,7 +23,8 @@ if (LW_LOCAL['version'] === LW_RELEASE['version']) {
         verify_path($file2update);
         echo "📁 " . $file2update;
         $file_content = file_get_contents(GITURL . $file2update);
-        file_put_contents($local_dest, $file_content);
+        unlink($local_dest);
+        file_put_contents($local_dest, $file_content, LOCK_EX);
         echo " ✅\n";
     }
 }
