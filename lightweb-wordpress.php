@@ -3,7 +3,7 @@
 /*
 Plugin Name: LightWeb WordPress
 Description: Sends an event to your LightWeb server when a post is created or updated.
-Version: 1.0.0
+Version: 1.0.2
 Author: NIZU <marvin.ai@nizu.io>
 Author URI: https://nizu.io/en/
 Text Domain: NIZU
@@ -19,13 +19,48 @@ add_action('save_post', 'lightweb_send_post_event', 10, 3);
 // Hook into category creation and update
 add_action('created_category', 'lightweb_send_category_event', 10, 2);
 add_action('edited_category', 'lightweb_send_category_event', 10, 2);
+function lightweb_get_branch($wpdb, $taxonomies_tree)
+{
+    $taxonomies_tree2 = [];
+    if (sizeof($taxonomies_tree) > 0) {
+        for ($t = 0; $t < sizeof($taxonomies_tree); $t++) {
+            $term_id = $taxonomies_tree[$t]['term_id'];
+            $query = 'SELECT `term_taxonomy_id`, `term_id`, `taxonomy`, `description`, `parent`, `count` FROM `wp_term_taxonomy` WHERE `parent`=' . $term_id . ' AND `taxonomy` = "category" AND `parent`>0 AND `description`<>""  ORDER BY `term_taxonomy_id` DESC';
+            $taxonomies_tree2 = $wpdb->get_results($query, ARRAY_A);
+            $taxonomies_tree2[$t]['branch'] = $taxonomies_tree2;
+        }
+    }
+    return $taxonomies_tree2;
+}
 function lightweb_send_category_event($term_id, $tt_id)
 {
+    global $wpdb;
+
     // Get the category object
     $category = get_term($term_id);
-    $lightweb_options = get_option('lightweb_option_name'); // Array of All Options
+    if (is_wp_error($category)) {
+        error_log('Failed to get term: ' . $category->get_error_message());
+        return;
+    }
+
+    // Get Lightweb options
+    $lightweb_options = get_option('lightweb_option_name');
+    if (!$lightweb_options || empty($lightweb_options['lightweb_stage_server_0'])) {
+        error_log('Lightweb options are not set or invalid.');
+        return;
+    }
+
     // Define the URL of the remote server
-    $remote_url = 'https://' . $lightweb_options['lightweb_stage_server_0'] . '/api/';
+    $remote_url = 'https://' . $lightweb_options['lightweb_stage_server_0'] . '/api/v1/?a=wp_category_update';
+
+    // Fetch taxonomies
+    $taxonomies_ground = get_taxonomies_hierarchy();
+    // Encode permalink and description in base64
+    array_walk_recursive($taxonomies_ground, function (&$value, $key) {
+        if ($key == 'permalink' || $key == 'description') {
+            $value = base64_encode($value);
+        }
+    });
 
     // Prepare data to send
     $permalink = get_category_link($term_id);
@@ -40,14 +75,45 @@ function lightweb_send_category_event($term_id, $tt_id)
         'secret' => AUTH_KEY,
         'site_url' => site_url(),
         'post_permalink' => base64_encode($permalink),
+        'taxonomies' => $taxonomies_ground
     );
 
+    // Send data to the remote server
+    send_data_to_remote_server($remote_url, $data);
+}
+
+function get_taxonomies_hierarchy($parent = 0)
+{
+    $args = array(
+        'taxonomy' => 'category',
+        'parent' => $parent,
+        'hide_empty' => false
+    );
+    $categories = get_terms($args);
+    $result = array();
+    foreach ($categories as $category) {
+        $item = array(
+            'term_taxonomy_id' => $category->term_taxonomy_id,
+            'term_id' => $category->term_id,
+            'taxonomy' => $category->taxonomy,
+            'description' => base64_encode($category->description),
+            'parent' => $category->parent,
+            'count' => $category->count,
+            'permalink' => base64_encode(get_category_link($category->term_id)),
+            'branch' => get_taxonomies_hierarchy($category->term_id)
+        );
+        $result[] = $item;
+    }
+
+    return $result;
+}
+
+function send_data_to_remote_server($url, $data)
+{
     // Convert data to JSON format
     $data_json = json_encode($data);
-
     // Initialize cURL session
-    $ch = curl_init($remote_url . "v1/?a=wp_category_update");
-
+    $ch = curl_init($url);
     // Set cURL options
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data_json);
@@ -60,10 +126,8 @@ function lightweb_send_category_event($term_id, $tt_id)
             'Content-Length: ' . strlen($data_json)
         )
     );
-
     // Execute cURL session and get response
     $response = curl_exec($ch);
-
     // Check for cURL errors
     if (curl_errno($ch)) {
         error_log('cURL error: ' . curl_error($ch));
@@ -71,7 +135,6 @@ function lightweb_send_category_event($term_id, $tt_id)
         // Log the response from the remote server
         error_log('Response from remote server: ' . $response);
     }
-
     // Close cURL session
     curl_close($ch);
 }
@@ -387,3 +450,15 @@ class LightWeb
 }
 if (is_admin())
     $lightweb = new LightWeb();
+
+function custom_taxonomy_walker($taxonomy, $parent = 0)
+{
+    $terms = get_terms($taxonomy, array('parent' => $parent, 'hide_empty' => false));
+    //If there are terms, start displaying
+    if (count($terms) > 0) {
+        //Displaying as a list
+
+        return $terms;
+    }
+    return [];
+}
