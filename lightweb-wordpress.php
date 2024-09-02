@@ -209,7 +209,13 @@ function lightweb_send_post_event($post_ID, $post, $update)
     $content = str_replace("ÿ", "&yuml;", $content);
     $content = str_replace("«", "&laquo;", $content);
     $content = str_replace("»", "&raquo;", $content);
-
+    $posttags = get_the_tags($post_ID);
+    $tags = array();
+    if ($posttags) {
+        foreach ($posttags as $tag) {
+            $tags[] = $tag->name;
+        }
+    }
     $title = htmlspecialchars($post->post_title, 0, "UTF-8");
     $data = array(
         'a' => 'wp_article_update',
@@ -232,7 +238,8 @@ function lightweb_send_post_event($post_ID, $post, $update)
         'secret' => AUTH_KEY,
         'site_url' => site_url(),
         'update' => $update,
-        'categories' => $categories
+        'categories' => $categories,
+        "tags" => $tags
     );
     // Convert data to JSON format
     $data_json = json_encode($data);
