@@ -3,7 +3,7 @@
 /*
 Plugin Name: LightWeb WordPress
 Description: Sends an event to your LightWeb server when a post is created or updated.
-Version: 1.0.2
+Version: 1.0.3
 Author: NIZU <marvin.ai@nizu.io>
 Author URI: https://nizu.io/en/
 Text Domain: NIZU
@@ -65,10 +65,11 @@ function lightweb_send_category_event($term_id, $tt_id)
     // Prepare data to send
     $permalink = get_category_link($term_id);
     $data = array(
+        'a' => 'wp_category_update',
         'term_id' => $term_id,
         'name' => $category->name,
         'slug' => $category->slug,
-        'description' => $category->description,
+        'description' => base64_encode($category->description),
         'taxonomy' => $category->taxonomy,
         'parent' => $category->parent,
         'count' => $category->count,
@@ -96,10 +97,11 @@ function get_taxonomies_hierarchy($parent = 0)
             'term_taxonomy_id' => $category->term_taxonomy_id,
             'term_id' => $category->term_id,
             'taxonomy' => $category->taxonomy,
-            'description' => base64_encode($category->description),
-            'parent' => $category->parent,
+            'post_title' => base64_encode($category->description),
+            'post_parent' => $category->parent,
             'count' => $category->count,
-            'permalink' => base64_encode(get_category_link($category->term_id)),
+            'post_type' => 'category',
+            'post_permalink' => base64_encode(get_category_link($category->term_id)),
             'branch' => get_taxonomies_hierarchy($category->term_id)
         );
         $result[] = $item;
@@ -167,12 +169,54 @@ function lightweb_send_post_event($post_ID, $post, $update)
     // Prepare data to send
     $permalink = get_permalink($post->ID);
     $categories = get_the_category($post->ID);
+	$content=trim($post->post_content);
+	$content= str_replace(["´","'","’"],"&apos;",$content);
+	$content= str_replace("À","&Agrave;",$content);
+	$content= str_replace("à","&agrave;",$content);
+	$content= str_replace("Â","&Acirc;",$content);
+	$content= str_replace("â","&acirc;",$content);
+	$content= str_replace("Æ","&AElig;",$content);
+	$content= str_replace("æ","&aelig;",$content);
+	$content= str_replace("Ç","&Ccedil;",$content);
+	$content= str_replace("ç","&ccedil;",$content);
+	$content= str_replace("È","&Egrave;",$content);
+	$content= str_replace("è","&egrave;",$content);
+	$content= str_replace("É","&Eacute;",$content);
+	$content= str_replace("é","&eacute;",$content);
+	$content= str_replace("Ê","&Ecirc;",$content);
+	$content= str_replace("ê","&ecirc;",$content);
+	$content= str_replace("Ë","&Euml;",$content);
+	$content= str_replace("ë","&euml;",$content);
+	$content= str_replace("Î","&Icirc;",$content);
+	$content= str_replace("î","&icirc;",$content);
+	$content= str_replace("Ï","&Iuml;",$content);
+	$content= str_replace("ï","&iuml;",$content);
+	$content= str_replace("Ô","&Ocirc;",$content);
+	$content= str_replace("ô","&ocirc;",$content);
+	$content= str_replace("Œ","&OElig;",$content);
+	$content= str_replace("œ","&oelig;",$content);
+	$content= str_replace("Ù","&Ugrave;",$content);
+	$content= str_replace("ù","&ugrave;",$content);
+	$content= str_replace("Û","&Ucirc;",$content);
+	$content= str_replace("û","&ucirc;",$content);
+	$content= str_replace("Ü","&Uuml;",$content);
+	$content= str_replace("ü","&uuml;",$content);
+	$content = str_replace("Ý", "&Yacute;", $content);
+    $content = str_replace("ý", "&yacute;", $content);
+    $content = str_replace("Þ", "&THORN;", $content);
+    $content = str_replace("þ", "&thorn;", $content);
+    $content = str_replace("ß", "&szlig;", $content);
+    $content = str_replace("ÿ", "&yuml;", $content);
+    $content = str_replace("«", "&laquo;", $content);
+    $content = str_replace("»", "&raquo;", $content);
+	
+	$title = htmlspecialchars($post->post_title, 0 , "UTF-8");
     $data = array(
         'a' => 'wp_article_update',
         'post_id' => $post_ID,
-        'post_title' => base64_encode($post->post_title),
+        'post_title' => base64_encode($title),
         'post_description' => get_post_meta($post_ID, "description", true),
-        'post_content' => base64_encode($post->post_content),
+        'post_content' => base64_encode($content),
         'post_status' => $post->post_status,
         'post_author' => $post->post_author,
         'post_date' => $post->post_date,
@@ -210,7 +254,7 @@ function lightweb_send_post_event($post_ID, $post, $update)
     curl_close($ch);
     // Check for cURL errors
     // Log the response from the remote server
-    error_log($response);
+    error_log("Response from lightweb server: " . $response);
     if (curl_errno($ch)) {
         error_log('cURL error: ' . curl_error($ch));
     } else {
