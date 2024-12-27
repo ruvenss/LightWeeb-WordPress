@@ -2,8 +2,8 @@
 /*
 /*
 Plugin Name: LightWeb WordPress
-Description: Sends an event to your LightWeb server when a post is created or updated.
-Version: 1.0.3
+Description: Sends an event to your LightWeb server when a post is created or updated. Allows as well to edit the Creation date of the articles
+Version: 1.0.4
 Author: NIZU <marvin.ai@nizu.io>
 Author URI: https://nizu.io/en/
 Text Domain: NIZU
@@ -516,3 +516,53 @@ function custom_taxonomy_walker($taxonomy, $parent = 0)
     }
     return [];
 }
+function add_custom_creation_date_meta_box() {
+    add_meta_box(
+        'custom_creation_date',          // Meta box ID
+        'Edit Creation Date',            // Title
+        'custom_creation_date_callback', // Callback function to render the meta box
+        'post',                          // Post type
+        'side',                          // Context (e.g., 'normal', 'side')
+        'high'                           // Priority
+    );
+}
+add_action('add_meta_boxes', 'add_custom_creation_date_meta_box');
+
+// Callback function to render the meta box
+function custom_creation_date_callback($post) {
+    // Get the current post date
+    $current_date = get_the_date('Y-m-d H:i:s', $post);
+
+    // Add a nonce field for security
+    wp_nonce_field('custom_creation_date_nonce', 'custom_creation_date_nonce_field');
+
+    echo '<label for="custom_creation_date">Creation Date:</label>';
+    echo '<input type="datetime-local" id="custom_creation_date" name="custom_creation_date" value="' . esc_attr(date('Y-m-d\TH:i', strtotime($current_date))) . '" />';
+}
+
+// Save the custom creation date when the post is saved
+function save_custom_creation_date($post_id) {
+    // Verify the nonce
+    if (!isset($_POST['custom_creation_date_nonce_field']) || !wp_verify_nonce($_POST['custom_creation_date_nonce_field'], 'custom_creation_date_nonce')) {
+        return;
+    }
+
+    // Check user permissions
+    if (!current_user_can('edit_post', $post_id)) {
+        return;
+    }
+
+    // Check if the custom field is set and valid
+    if (isset($_POST['custom_creation_date']) && !empty($_POST['custom_creation_date'])) {
+        $new_date = sanitize_text_field($_POST['custom_creation_date']);
+        $new_date_gmt = get_gmt_from_date($new_date);
+
+        // Update the post date and post date GMT
+        wp_update_post([
+            'ID'            => $post_id,
+            'post_date'     => $new_date,
+            'post_date_gmt' => $new_date_gmt,
+        ]);
+    }
+}
+add_action('save_post', 'save_custom_creation_date');
